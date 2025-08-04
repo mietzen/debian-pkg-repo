@@ -13,62 +13,80 @@ import subprocess
 from collections import defaultdict
 
 def extract_deb_control(deb_data: bytes) -> Dict[str, str]:
-    """Extract control information from a .deb package in memory."""
+    """Extract control information from a .deb package in memory.
 
-    # .deb files are ar archives containing control.tar.* and data.tar.*
-    # We need to extract the control.tar.* and read the control file
-
+    Simplified: only handle control.tar.xz and control.tar.gz using ar + Python tarfile.
+    No zstd handling; tarfile auto-detects compression based on mode we set.
+    """
     with tempfile.NamedTemporaryFile() as temp_deb:
         temp_deb.write(deb_data)
         temp_deb.flush()
 
-        # Try control.tar.xz first, then control.tar.gz as fallback
         control_tar_data = None
-        for member in ('control.tar.xz', 'control.tar.gz'):
+        mode = None
+
+        # Prefer xz, then gz
+        for member, tar_mode in (("control.tar.xz", "r:xz"), ("control.tar.gz", "r:gz")):
             try:
-                result = subprocess.run(
-                    ['ar', 'p', temp_deb.name, member],
-                    capture_output=True,
-                    check=True
-                )
-                control_tar_data = result.stdout
-                mode = 'r:xz' if member.endswith('.xz') else 'r:gz'
-                break
+                res = subprocess.run(["ar", "p", temp_deb.name, member], capture_output=True, check=True)
+                if res.stdout:
+                    control_tar_data = res.stdout
+                    mode = tar_mode
+                    break
             except subprocess.CalledProcessError:
                 continue
 
         if control_tar_data is None:
-            raise ValueError("No control.tar.* found in package")
+            raise ValueError("No control.tar.* found in package (expected control.tar.xz or control.tar.gz)")
 
-    # Extract control file from control tar
-    with tarfile.open(fileobj=io.BytesIO(control_tar_data), mode=mode) as tar:
-        control_file = tar.extractfile('control')
-        if control_file is None:
-            raise ValueError("No control file found in package")
+        # Extract control file from control tar (handle nested path variants)
+        with tarfile.open(fileobj=io.BytesIO(control_tar_data), mode=mode) as tar:
+            names = tar.getnames()
+            member = None
+            # Top level control
+            if "control" in names:
+                try:
+                    member = tar.getmember("control")
+                except KeyError:
+                    member = None
+            # Nested common path
+            if member is None and "control/control" in names:
+                try:
+                    member = tar.getmember("control/control")
+                except KeyError:
+                    member = None
+            # Any basename 'control'
+            if member is None:
+                for name in names:
+                    if name.rsplit("/", 1)[-1] == "control":
+                        try:
+                            member = tar.getmember(name)
+                            break
+                        except KeyError:
+                            continue
 
-        control_content = control_file.read().decode('utf-8', errors='replace')
+            if member is None:
+                raise ValueError("No 'control' file found inside control.tar.*")
 
-    # Parse control file
+            with tar.extractfile(member) as control_file:
+                control_content = control_file.read().decode("utf-8", errors="replace")
+
+    # Parse control content
     control_info: Dict[str, str] = {}
     current_field = None
-
-    for line in control_content.split('\n'):
-        line = line.rstrip()
+    for line in control_content.splitlines():
         if not line:
             continue
-
-        if line.startswith(' ') or line.startswith('\t'):
-            # Continuation of previous field
+        if line.startswith((" ", "\t")):
             if current_field:
-                control_info[current_field] += '\n' + line
-        else:
-            # New field
-            if ':' in line:
-                field, value = line.split(':', 1)
-                field = field.strip()
-                value = value.strip()
-                control_info[field] = value
-                current_field = field
+                control_info[current_field] += "\n" + line
+            continue
+        if ":" in line:
+            field, value = line.split(":", 1)
+            field = field.strip()
+            value = value.strip()
+            control_info[field] = value
+            current_field = field
 
     return control_info
 

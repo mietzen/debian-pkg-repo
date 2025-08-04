@@ -31,7 +31,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev binutils
+          sudo apt-get install -y dpkg-dev binutils libarchive-tools
           pip install PyYAML requests
 
       - name: Download and Process Packages
