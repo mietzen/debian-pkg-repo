@@ -2,8 +2,6 @@ name: Deploy Debian Repository
 
 on:
   push:
-    paths:
-      - 'packages.yml'
     branches:
       - main
   workflow_dispatch:
