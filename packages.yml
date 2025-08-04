@@ -1,5 +1,5 @@
 packages:
   smb-zfs:
+    asset_regex: .*all.*
     url: https://github.com/mietzen/smb-zfs
-    version: "0.7.4"
-    asset_regex: '.*all.*'
+    version: 0.8.0
