@@ -74,7 +74,7 @@ Practical implications:
 ### Adding your Repository to your System
 
 ```bash
-echo "deb [trusted=yes] https://<GH-USER>.github.io/<REPO-NAME>/ stable main" | sudo tee /etc/apt/sources.list.d/my-deb-pkgs.list
+echo "deb [trusted=yes] https://mietzen.github.io/debian-pkg-repo/ stable main" | sudo tee /etc/apt/sources.list.d/mietzens-deb-pkgs.list
 sudo apt-get update
 ```
 
@@ -92,23 +92,6 @@ sudo apt-get update
 
 2. The update workflow will automatically detect new releases daily, or you can trigger it manually:
    - Go to Actions → Update Package List → Run workflow
-
-## End-to-end test (ubuntu-latest)
-
-You can validate dynamic architecture discovery, Release Architectures, and Packages contents using a sample packages.yml that references assets across multiple architectures. On ubuntu-latest, the deploy workflow:
-
-- Installs dpkg-dev and Python tooling
-- Builds pages/pool and dists/stable/main/binary-* with Packages and Packages.gz
-- Derives the Architectures list by scanning existing binary-* directories and writes it into dists/stable/Release
-- Adds SHA256 checksums for Packages and Packages.gz
-
-To run locally in GitHub Actions:
-- Push a packages.yml that selects multi-arch assets (e.g., an amd64 .deb, an arm64 .deb, and an all .deb using asset_regex).
-- Run the “Deploy Debian Repository” workflow; verify in artifacts:
-  - dists/stable/Release contains Architectures: all amd64 arm64 (order may vary)
-  - dists/stable/main/binary-all/Packages has only Architecture: all entries
-  - dists/stable/main/binary-amd64/Packages includes amd64 entries plus the all entries
-  - dists/stable/main/binary-arm64/Packages includes arm64 entries plus the all entries
 
 ## License
 
