@@ -31,7 +31,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg-dev
+          sudo apt-get install -y dpkg-dev binutils
           pip install PyYAML requests
 
       - name: Download and Process Packages
@@ -90,7 +90,7 @@ jobs:
         working-directory: ./pages
         run: |
           cat > ${GITHUB_REPOSITORY#*/}.list << EOF
-          deb https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/ stable main
+          deb [trusted=yes] https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/ stable main
           EOF
 
       - name: Create Index Pages
