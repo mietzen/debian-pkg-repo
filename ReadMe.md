@@ -1,4 +1,4 @@
-# Debian Repository on GitHub Pages
+# Mietzens Debian Repository
 
 This repository automatically creates and maintains a Debian package repository hosted on GitHub Pages by pulling `.deb` packages from GitHub releases.
 
